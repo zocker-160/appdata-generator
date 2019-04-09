@@ -1,23 +1,274 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="generator" content="GitLab Pages">
-    <title>Plain HTML site using GitLab Pages</title>
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <div class="navbar">
-      <a href="https://pages.gitlab.io/plain-html/">Plain HTML Example</a>
-      <a href="https://gitlab.com/pages/plain-html/">Repository</a>
-      <a href="https://gitlab.com/pages/">Other Examples</a>
+<html><head>
+    <title>Appstream Generator</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tachyons/4.11.1/tachyons.min.css" integrity="sha256-XiJ+PedljEmPP2VaQzSzekfCZdPr0fpqmh9dY6kpsuQ=" crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js" integrity="sha256-chlNFSVx3TdcQ2Xlw7SvnbLAavAQLO0Y/LBiWX04viY=" crossorigin="anonymous"></script>
+
+    <script type="text/javascript">
+    window.onload=function(){
+        new Vue({
+            el: '#editor',
+            data: {
+                id: '',
+                name: '',
+                developerName: '',
+                projectLicense: '',
+                metadataLicense: 'CC0-1.0',
+                summary: '',
+                description: '',
+                urls: [
+                    {
+                        type: '',
+                        url: ''
+                    }
+                ],
+                screenshots: [
+                    {
+                        type: '',
+                        width: '',
+                        height: '',
+                        url: ''
+                    }
+                ],
+                releases: [
+                    {
+                        version: '',
+                        date: '',
+                        description: ''
+                    }
+                ]
+            },
+            computed: {
+                encodedXML: function(xml) {
+                    return 'data:Application/octet-stream,' + encodeURIComponent(this.compiledXML)
+                },
+                compiledXML: function () {
+                    var xml = '<?xml version="1.0" encoding="UTF-8"?><component></component>';
+                    var xmlDoc = new DOMParser().parseFromString(xml, "application/xml");
+                    var component = xmlDoc.documentElement
+                    component.setAttribute("type", "desktop")
+
+                    var id = xmlDoc.createElement("id")
+                    id.innerHTML = this.id
+                    component.appendChild(id)
+
+                    var launchable = xmlDoc.createElement("launchable")
+                    launchable.setAttribute("type", "desktop-id")
+                    launchable.innerHTML = this.id + '.desktop'
+                    component.appendChild(launchable)
+
+                    var name = xmlDoc.createElement("name")
+                    name.innerHTML = this.name
+                    component.appendChild(name)
+
+                    var developerName = xmlDoc.createElement("developer_name")
+                    developerName.innerHTML = this.developerName
+                    component.appendChild(developerName)
+
+                    var projectLicense = xmlDoc.createElement("project_license")
+                    projectLicense.innerHTML = this.projectLicense
+                    component.appendChild(projectLicense)
+
+                    var metadataLicense = xmlDoc.createElement("metadata_license")
+                    metadataLicense.innerHTML = this.metadataLicense
+                    component.appendChild(metadataLicense)
+
+                    var summary = xmlDoc.createElement("summary")
+                    summary.innerHTML = this.summary
+                    component.appendChild(summary)
+
+                    var description = xmlDoc.createElement("description")
+                    description.innerHTML = this.description
+                    component.appendChild(description)
+
+                    this.urls.forEach((urlItem) => {
+                        var url = xmlDoc.createElement("url")
+                        url.setAttribute("type", urlItem.type)
+                        url.innerHTML = urlItem.url
+                        component.appendChild(url)
+                    })
+
+                    var screenshots = xmlDoc.createElement("screenshots")
+                    this.screenshots.forEach((screenshotItem) => {
+                        var screenshot = xmlDoc.createElement("screenshot")
+                        var image = xmlDoc.createElement("image")
+                        image.setAttribute("type", screenshotItem.type)
+                        image.setAttribute("width", screenshotItem.width)
+                        image.setAttribute("height", screenshotItem.height)
+                        image.innerHTML = screenshotItem.url
+                        screenshot.appendChild(image)
+                        screenshots.appendChild(screenshot)
+                    })
+                    component.appendChild(screenshots)
+
+                    var releases = xmlDoc.createElement("releases")
+                    this.releases.forEach((releaseItem) => {
+                        var release = xmlDoc.createElement("release")
+                        release.setAttribute("version", releaseItem.version)
+                        release.setAttribute("date", releaseItem.date)
+                        var releaseDescription = xmlDoc.createElement("description")
+                        releaseDescription.innerHTML = releaseItem.description
+                        release.appendChild(releaseDescription)
+                        releases.appendChild(release)
+                    })
+                    component.appendChild(releases)
+
+                    return this.prettify(new XMLSerializer().serializeToString(xmlDoc))
+                }
+            },
+            methods: {
+                addUrl: function (){
+                    this.urls.push({
+                        type: '',
+                        url: ''
+                    })
+                },
+                addScreenshot: function (){
+                    this.screenshots.push({
+                        type: '',
+                        width: '',
+                        height: '',
+                        url: ''
+                    })
+                },
+                addRelease: function (){
+                    this.releases.push({
+                        version: '',
+                        date: '',
+                        description: ''
+                    })
+                },
+                prettify: function (xml) {
+                    var reg = /(>)\s*(<)(\/*)/g; // updated Mar 30, 2015
+                    var wsexp = / *(.*) +\n/g;
+                    var contexp = /(<.+>)(.+\n)/g;
+                    xml = xml.replace(reg, '$1\n$2$3').replace(wsexp, '$1\n').replace(contexp, '$1\n$2');
+                    var pad = 0;
+                    var formatted = '';
+                    var lines = xml.split('\n');
+                    var indent = 0;
+                    var lastType = 'other';
+                    // 4 types of tags - single, closing, opening, other (text, doctype, comment) - 4*4 = 16 transitions
+                    var transitions = {
+                        'single->single': 0,
+                        'single->closing': -1,
+                        'single->opening': 0,
+                        'single->other': 0,
+                        'closing->single': 0,
+                        'closing->closing': -1,
+                        'closing->opening': 0,
+                        'closing->other': 0,
+                        'opening->single': 1,
+                        'opening->closing': 0,
+                        'opening->opening': 1,
+                        'opening->other': 1,
+                        'other->single': 0,
+                        'other->closing': -1,
+                        'other->opening': 0,
+                        'other->other': 0
+                    };
+
+                    for (var i = 0; i < lines.length; i++) {
+                        var ln = lines[i];
+
+                        // Luca Viggiani 2017-07-03: handle optional <?xml ... ?> declaration
+                        if (ln.match(/\s*<\?xml/)) {
+                            formatted += ln + "\n";
+                            continue;
+                        }
+                        // ---
+
+                        var single = Boolean(ln.match(/<.+\/>/)); // is this line a single tag? ex. <br />
+                        var closing = Boolean(ln.match(/<\/.+>/)); // is this a closing tag? ex. </a>
+                        var opening = Boolean(ln.match(/<[^!].*>/)); // is this even a tag (that's not <!something>)
+                        var type = single ? 'single' : closing ? 'closing' : opening ? 'opening' : 'other';
+                        var fromTo = lastType + '->' + type;
+                        lastType = type;
+                        var padding = '';
+
+                        indent += transitions[fromTo];
+                        for (var j = 0; j < indent; j++) {
+                            padding += '    ';
+                        }
+                        if (fromTo == 'opening->closing')
+                        formatted = formatted.substr(0, formatted.length - 1) + ln + '\n'; // substr removes line break (\n) from prev loop
+                        else
+                        formatted += padding + ln + '\n';
+                    }
+
+                    return formatted;
+                }
+            }
+        })
+    }
+</script>
+
+</head>
+<body>
+    <div id="editor" class="helvetica">
+        <div id="input" class="fl w-50 pa3">
+            <label class="fl w-100">Id</label>
+            <input type="text" v-model="id" placeholder="org.example.ExampleApp" class="fl w-100">
+            <label class="fl w-100">Name</label>
+            <input type="text" v-model="name" placeholder="Example App" class="fl w-100">
+            <label class="fl w-100">Developer Name</label>
+            <input type="text" v-model="developerName" placeholder="Example Team" class="fl w-100">
+            <label class="fl w-100">Project License</label>
+            <input type="text" v-model="projectLicense" placeholder="GPL-3.0" class="fl w-100">
+            <label class="fl w-100">Metadata License</label>
+            <input type="text" v-model="metadataLicense" placeholder="CC0-1.0" class="fl w-100">
+            <label class="fl w-100">Summary</label>
+            <textarea v-model="summary" placeholder="An example app for new devs." class="fl w-100"></textarea>
+            <label class="fl w-100">Description</label>
+            <textarea v-model="description" placeholder="A description of the app with *some* rich text." class="fl w-100"></textarea>
+
+            <section>
+                <label class="fl w-100">Urls</label>
+                <template v-for="(url, index) in urls">
+                    <select v-model="url.type" class="fl w-third">
+                        <option disabled value="">Please select one</option>
+                        <option>homepage</option>
+                        <option>bugtracker</option>
+                        <option>faq</option>
+                        <option>help</option>
+                        <option>donation</option>
+                        <option>translate</option>
+                        <option>contact</option>
+                    </select>
+                    <input type="text" v-model="url.url" placeholder="https://example.com" class="fl w-two-thirds">
+                </template>
+                <button v-on:click="addUrl">Add</button>
+            </section>
+
+            <section>
+                <label class="fl w-100">Screenshots</label>
+                <template v-for="(screenshot, index) in screenshots">
+                    <select v-model="screenshot.type" class="fl w-third">
+                        <option disabled value="">Please select one</option>
+                        <option>source</option>
+                        <option>thumbnail</option>
+                    </select>
+                    <input type="text" v-model="screenshot.width" placeholder="800" class="fl w-third">
+                    <input type="text" v-model="screenshot.height" placeholder="600" class="fl w-third">
+                    <input type="text" v-model="screenshot.url" placeholder="url" class="fl w-100">
+                </template>
+                <button v-on:click="addScreenshot">Add</button>
+            </section>
+
+            <section>
+                <label class="fl w-100">Releases</label>
+                <template v-for="(release, index) in releases">
+                    <input type="text" v-model="release.version" placeholder="v0.1.0" class="fl w-100">
+                    <input type="text" v-model="release.date" placeholder="01-01-2020" class="fl w-100">
+                    <textarea v-model="release.description" placeholder="description" class="fl w-100"></textarea>
+                </template>
+                <button v-on:click="addRelease">Add</button>
+            </section>
+        </div>
+        <pre id="output" class="fl w-50 pa3">{{ compiledXML }}</pre>
+        <a :href="encodedXML" download="appdata.xml">Download XML</a>
     </div>
-
-    <h1>Hello World!</h1>
-
-    <p>
-      This is a simple plain-HTML website on GitLab Pages, without any fancy static site generator.
-    </p>
-  </body>
-</html>
-
+</body></html>
