@@ -27,9 +27,20 @@
                     screenshots: [
                         {
                             type: '',
-                            width: '',
-                            height: '',
-                            url: ''
+                            images: [
+                                {
+                                    type: 'source',
+                                    width: '',
+                                    height: '',
+                                    url: ''
+                                },
+                                {
+                                    type: 'thumbnail',
+                                    width: '',
+                                    height: '',
+                                    url: ''
+                                }
+                            ]
                         }
                     ],
                     releases: [
@@ -104,12 +115,16 @@
                             var screenshots = xmlDoc.createElement("screenshots")
                             this.screenshots.forEach((screenshotItem) => {
                                 var screenshot = xmlDoc.createElement("screenshot")
-                                var image = xmlDoc.createElement("image")
-                                image.setAttribute("type", screenshotItem.type)
-                                image.setAttribute("width", screenshotItem.width)
-                                image.setAttribute("height", screenshotItem.height)
-                                image.innerHTML = screenshotItem.url
-                                screenshot.appendChild(image)
+                                screenshot.setAttribute("type", screenshotItem.type)
+                                screenshotItem.images.forEach((imageItem) => {
+                                    var image = xmlDoc.createElement("image")
+                                    image.setAttribute("type", imageItem.type)
+                                    image.setAttribute("width", imageItem.width)
+                                    image.setAttribute("height", imageItem.height)
+                                    image.innerHTML = imageItem.url
+                                    screenshot.appendChild(image)
+                                })
+                                
                                 screenshots.appendChild(screenshot)
                             })
                             component.appendChild(screenshots)
@@ -133,6 +148,86 @@
                     }
                 },
                 methods: {
+                		openFile: function(event){
+		                    var input = event.target
+                            var reader = new FileReader()
+                            reader.onload = () => {
+                            var xml = reader.result
+                            var xmlDoc = new DOMParser().parseFromString(xml, "application/xml")
+                            var component = xmlDoc.documentElement
+                            this.urls = []
+                            this.screenshots = []
+                            this.releases = []
+                            for (let i = 0; i < component.children.length; i++) {
+                                    let el = component.children[i]
+                                switch(el.tagName) {
+                                    case 'id':
+                                        this.id = el.innerHTML
+                                        break
+                                        case 'name':
+                                        this.name = el.innerHTML
+                                        break
+                                    case 'developer_name':
+                                        this.developerName = el.innerHTML
+                                        break
+                                    case 'project_license':
+                                        this.projectLicense = el.innerHTML
+                                        break
+                                        case 'metadata_license':
+                                        this.metadataLicense = el.innerHTML
+                                        break
+                                    case 'summary':
+                                        this.summary = el.innerHTML.trim()
+                                        break
+                                    case 'description':
+                                        this.description = el.innerHTML.trim()
+                                        break
+                                    case 'url':
+                                        let url = {
+                                            type: el.getAttribute('type'),
+                                            url: el.innerHTML
+                                        }
+                                        this.urls.push(url)
+                                        break
+                                    case 'screenshots':
+                                        for(let l = 0; l < el.children.length; l++) {
+                                            let screenshotEl = el.children[l]
+                                            console.log(screenshotEl)
+                                            let screenshot = {
+                                                type: screenshotEl.getAttribute('type') ||  '',
+                                                images: []
+                                            }
+                                            for(let j = 0; j < screenshotEl.children.length; j++) {
+                                                let imageEl = screenshotEl.children[j]
+                                                console.log(imageEl)
+                                                let image = {
+                                                    type: imageEl.getAttribute('type') || screenshotEl.children.length == 1 ? 'source' : '',
+                                                    width: imageEl.getAttribute('width') || '',
+                                                    height: imageEl.getAttribute('height') || '',
+                                                    url: imageEl.innerHTML
+                                                }
+                                                screenshot.images.push(image)
+                                            }
+                                            this.screenshots.push(screenshot)
+                                        }
+                                        break
+                                    case 'releases':
+                                        for(let l = 0; l < el.children.length; l++) {
+                                            let release = {
+                                                version: el.children[l].getAttribute('version'),
+                                                date: el.children[l].getAttribute('date'),
+                                                description: el.children[l].firstElementChild.innerHTML.trim()
+                                            }
+                                            this.releases.push(release)
+                                        }
+                                        break
+                                    default:
+                                        continue
+                                }
+                            }
+                        }
+                        reader.readAsText(input.files[0]);
+                    },
                     addUrl: function (){
                         this.urls.push({
                             type: '',
@@ -145,10 +240,32 @@
                     addScreenshot: function (){
                         this.screenshots.push({
                             type: '',
+                            images: [
+                                {
+                                    type: 'source',
+                                    width: '',
+                                    height: '',
+                                    url: ''
+                                },
+                                {
+                                    type: 'thumbnail',
+                                    width: '',
+                                    height: '',
+                                    url: ''
+                                }
+                            ]
+                        })
+                    },
+                    addThumbnail: function (index){
+                        this.screenshots[index].images.push({
+                            type: 'thumbnail',
                             width: '',
                             height: '',
                             url: ''
                         })
+                    },
+                    removeImage: function(sindex, tindex){
+                        this.screenshots[sindex].images.splice(tindex, 1);
                     },
                     removeScreenshot: function(index){
                         this.screenshots.splice(index, 1);
@@ -244,6 +361,11 @@
     <div id="editor" class="helvetica">
         <div id="input" class="fl w-50">
             <section>
+                <label>Import</label>
+                <input type="file" accept="application/xml" @change="openFile(event)" class="fl w-100">
+            </section>
+        
+            <section>
                 <label>Id</label>
                 <input type="text" v-model="id" placeholder="org.example.ExampleApp" class="fl w-100">
             </section>
@@ -305,10 +427,10 @@
                         <label>URL</label>
                         <input type="text" v-model="url.url" placeholder="https://example.com">
                     </div>
-                    <button v-on:click="removeUrl(index)" class="fr w-5">X</button>
+                    <button @click="removeUrl(index)" class="fr w-5">X</button>
                 </div>
                 <div>
-                    <button v-on:click="addUrl">Add</button>
+                    <button @click="addUrl">Add</button>
                 </div>
             </section>
 
@@ -319,26 +441,41 @@
                         <label>Type</label>
                         <select v-model="screenshot.type" >
                             <option disabled value="">Please select one</option>
-                            <option>source</option>
-                            <option>thumbnail</option>
+                            <option>default</option>
+                            <option></option>
                         </select>
                     </div>
-                    <div class="fl">
-                        <label>Width</label>
-                        <input type="text" v-model="screenshot.width" placeholder="800" size="4">
+                    <button @click="removeScreenshot(index)" class="fr w-5">X</button>
+                    <div v-for="(image, imageIndex) in screenshot.images" class="fl w-100 bg-washed-yellow pv3">
+                        <div class="fl w-25">
+                            <label>Type</label>
+                            <select v-model="image.type" >
+                                <option disabled value="">Please select one</option>
+                                <option>source</option>
+                                <option>thumbnail</option>
+                            </select>
+                        </div>
+                        <div class="fl">
+                            <label>Width</label>
+                            <input type="text" v-model="image.width" placeholder="800" size="4">
+                        </div>
+                        <div class="fl pl3">
+                            <label>Height</label>
+                            <input type="text" v-model="image.height" placeholder="600" size="4">
+                        </div>
+                        <div class="fl w-35 pl3">
+                            <label>URL</label>
+                            <input type="text" v-model="image.url" placeholder="https://example.com">
+                        </div>
+                        <button @click="removeImage(index, imageIndex)" class="fr w-5">X</button>
                     </div>
-                    <div class="fl pl3">
-                        <label>Height</label>
-                        <input type="text" v-model="screenshot.height" placeholder="600" size="4">
+                    
+                    <div class="fl w-100">
+                        <button @click="addThumbnail(index)">Add Thumb</button>
                     </div>
-                    <div class="fl w-35 pl3">
-                        <label>URL</label>
-                        <input type="text" v-model="screenshot.url" placeholder="https://example.com">
-                    </div>
-                    <button v-on:click="removeScreenshot(index)" class="fr w-5">X</button>
                 </div>
                 <div>
-                    <button v-on:click="addScreenshot">Add</button>
+                    <button @click="addScreenshot">Add</button>
                 </div>
             </section>
 
@@ -353,14 +490,14 @@
                         <label>Date</label>
                         <input type="text" v-model="release.date" placeholder="01-01-2020">
                     </div>
-                    <button v-on:click="removeRelease(index)" class="fr w-5">X</button>
+                    <button @click="removeRelease(index)" class="fr w-5">X</button>
                     <div class="fl w-100">
                         <label>Description</label>
                         <textarea v-model="release.description" placeholder="Bug fixes." class="fl w-100"></textarea>
                     </div>
                 </div>
                 <div>
-                    <button v-on:click="addRelease">Add</button>
+                    <button @click="addRelease">Add</button>
                 </div>
             </section>
         </div>
