@@ -237,6 +237,12 @@
                     removeUrl: function(index){
                         this.urls.splice(index, 1);
                     },
+                    upUrl: function(index){
+                        this.move(this.urls, index, -1)
+                    },
+                    downUrl: function(index){
+                        this.move(this.urls, index, 1)
+                    },
                     addScreenshot: function (){
                         this.screenshots.push({
                             type: '',
@@ -270,8 +276,14 @@
                     removeScreenshot: function(index){
                         this.screenshots.splice(index, 1);
                     },
+                    upScreenshot: function(index){
+                        this.move(this.screenshots, index, -1)
+                    },
+                    downScreenshot: function(index){
+                        this.move(this.screenshots, index, 1)
+                    },
                     addRelease: function (){
-                        this.releases.push({
+                        this.releases.unshift({
                             version: '',
                             date: '',
                             description: ''
@@ -279,6 +291,18 @@
                     },
                     removeRelease: function(index){
                         this.releases.splice(index, 1);
+                    },
+                    upRelease: function(index){
+                        this.move(this.releases, index, -1)
+                    },
+                    downRelease: function(index){
+                        this.move(this.releases, index, 1)
+                    },
+                    move: function(array, index, delta) {
+                        var newIndex = index + delta;
+                        if (newIndex < 0  || newIndex == array.length) return; //Already at the top or bottom.
+                        var indexes = [index, newIndex].sort(); //Sort the indixes
+                        array.splice(indexes[0], 2, array[indexes[1]], array[indexes[0]]); //Replace from lowest index, two elements, reverting the order
                     },
                     prettify: function (xml) {
                         var reg = /(>)\s*(<)(\/*)/g; // updated Mar 30, 2015
@@ -318,7 +342,6 @@
                                 formatted += ln + "\n";
                                 continue;
                             }
-                            // ---
 
                             var single = Boolean(ln.match(/<.+\/>/)); // is this line a single tag? ex. <br />
                             var closing = Boolean(ln.match(/<\/.+>/)); // is this a closing tag? ex. </a>
@@ -408,96 +431,82 @@
             </section>
 
             <section class="multi">
-                <label class="fl w-100 bb">URLs</label>
-                <div v-for="(url, index) in urls" class="fl w-100 bg-washed-blue pv3">
-                    <div class="fl w-25">
-                        <label>Type</label>
-                        <select v-model="url.type" >
-                            <option disabled value="">Please select one</option>
-                            <option>homepage</option>
-                            <option>bugtracker</option>
-                            <option>faq</option>
-                            <option>help</option>
-                            <option>donation</option>
-                            <option>translate</option>
-                            <option>contact</option>
-                        </select>
-                    </div>
-                    <div class="fl w-70">
-                        <label>URL</label>
-                        <input type="text" v-model="url.url" placeholder="https://example.com">
-                    </div>
-                    <button @click="removeUrl(index)" class="fr w-5">X</button>
-                </div>
-                <div>
+                <div class="bb">
+                    <label>URLs</label>
                     <button @click="addUrl">Add</button>
+                </div>
+                <div v-for="(url, index) in urls" class="bg-washed-blue pv3">
+                    <button @click="removeUrl(index)" class="fr">X</button>
+                    <button @click="upUrl(index)" class="fr">&#9650;</button>
+                    <button @click="downUrl(index)" class="fr">&#9660;</button>
+                    <label>Type</label>
+                    <select v-model="url.type" >
+                        <option disabled value="">Please select one</option>
+                        <option>homepage</option>
+                        <option>bugtracker</option>
+                        <option>faq</option>
+                        <option>help</option>
+                        <option>donation</option>
+                        <option>translate</option>
+                        <option>contact</option>
+                    </select>
+                    <label>URL</label>
+                    <input type="text" v-model="url.url" placeholder="https://example.com">
                 </div>
             </section>
 
             <section class="multi">
-                <label class="fl w-100 bb">Screenshots</label>
+                <div class="bb">
+                    <label>Screenshots</label>
+                    <button @click="addScreenshot">Add</button>
+                </div>
                 <div v-for="(screenshot, index) in screenshots" class="fl w-100 bg-washed-yellow pv3">
-                    <div class="fl w-25">
-                        <label>Type</label>
-                        <select v-model="screenshot.type" >
-                            <option disabled value="">Please select one</option>
-                            <option>default</option>
-                            <option></option>
-                        </select>
-                    </div>
-                    <button @click="removeScreenshot(index)" class="fr w-5">X</button>
+                    <button @click="removeScreenshot(index)" class="fr">X</button>
+                    <button @click="upScreenshot(index)" class="fr">&#9650;</button>
+                    <button @click="downScreenshot(index)" class="fr">&#9660;</button>
+                    <label>Type</label>
+                    <select v-model="screenshot.type" >
+                        <option disabled value="">Please select one</option>
+                        <option>default</option>
+                        <option></option>
+                    </select>
                     <div v-for="(image, imageIndex) in screenshot.images" class="fl w-100 bg-washed-yellow pv3">
-                        <div class="fl w-25">
-                            <label>Type</label>
-                            <select v-model="image.type" >
-                                <option disabled value="">Please select one</option>
-                                <option>source</option>
-                                <option>thumbnail</option>
-                            </select>
-                        </div>
-                        <div class="fl">
-                            <label>Width</label>
-                            <input type="text" v-model="image.width" placeholder="800" size="4">
-                        </div>
-                        <div class="fl pl3">
-                            <label>Height</label>
-                            <input type="text" v-model="image.height" placeholder="600" size="4">
-                        </div>
-                        <div class="fl w-35 pl3">
-                            <label>URL</label>
-                            <input type="text" v-model="image.url" placeholder="https://example.com">
-                        </div>
-                        <button @click="removeImage(index, imageIndex)" class="fr w-5">X</button>
+                        <button @click="removeImage(index, imageIndex)" class="fr">X</button>
+                        <label>Type</label>
+                        <select v-model="image.type" >
+                            <option disabled value="">Please select one</option>
+                            <option>source</option>
+                            <option>thumbnail</option>
+                        </select>
+                        <label>Width</label>
+                        <input type="text" v-model="image.width" placeholder="800" size="4">
+                        <label>Height</label>
+                        <input type="text" v-model="image.height" placeholder="600" size="4">
+                        <label>URL</label>
+                        <input type="text" v-model="image.url" placeholder="https://example.com">
                     </div>
-                    
                     <div class="fl w-100">
                         <button @click="addThumbnail(index)">Add Thumb</button>
                     </div>
                 </div>
-                <div>
-                    <button @click="addScreenshot">Add</button>
-                </div>
             </section>
 
             <section class="multi">
-                <label class="fl w-100 bb">Releases</label>
-                <div v-for="(release, index) in releases" class="fl w-100 bg-washed-red pv3">
-                    <div class="fl w-35">
-                        <label>Version</label>
-                        <input type="text" v-model="release.version" placeholder="v0.1.0">
-                    </div>
-                    <div class="fl w-35 pl3">
-                        <label>Date</label>
-                        <input type="text" v-model="release.date" placeholder="01-01-2020">
-                    </div>
-                    <button @click="removeRelease(index)" class="fr w-5">X</button>
-                    <div class="fl w-100">
-                        <label>Description</label>
-                        <textarea v-model="release.description" placeholder="Bug fixes." class="fl w-100"></textarea>
-                    </div>
-                </div>
-                <div>
+                <div class="bb">
+                    <label>Releases</label>
                     <button @click="addRelease">Add</button>
+                </div>
+                <div v-for="(release, index) in releases" class="fl w-100 bg-washed-red pv3">
+                    <button @click="removeRelease(index)" class="fr">X</button>
+                    <button @click="upRelease(index)" class="fr">&#9650;</button>
+                    <button @click="downRelease(index)" class="fr">&#9660;</button>
+                    <label>Version</label>
+                    <input type="text" v-model="release.version" placeholder="v0.1.0">
+                    <label>Date</label>
+                    <input type="text" v-model="release.date" placeholder="01-01-2020">
+                    <br>
+                    <label>Description</label>
+                    <textarea v-model="release.description" placeholder="Bug fixes." class="fl w-100"></textarea>
                 </div>
             </section>
         </div>
